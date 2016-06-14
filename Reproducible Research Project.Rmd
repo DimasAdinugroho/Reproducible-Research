@@ -1,0 +1,106 @@
+---
+title: "Reproducible Research Project"
+author: "Dimas Adinugroho"
+date: "24 Mei 2016"
+output: html_document
+---
+
+# Reproducible Research 
+
+## Introduction
+
+It is now possible to collect a large amount of data about personal movement
+using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone
+Up. These type of devices are part of the “quantified self” movement – a group
+of enthusiasts who take measurements about themselves regularly to improve
+their health, to find patterns in their behavior, or because they are tech geeks.
+But these data remain under-utilized both because the raw data are hard to
+obtain and there is a lack of statistical methods and software for processing and
+interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring device.
+This device collects data at 5 minute intervals through out the day. The data
+consists of two months of data from an anonymous individual collected during
+the months of October and November, 2012 and
+
+## Data
+
+The variables included in this dataset are:
+
+* ``steps``: Number of steps taking in a 5-minute interval (missing values are
+coded as NA)
+* ``date``: The date on which the measurement was taken in YYYY-MM-DD
+format
+* ``interval``: Identifier for the 5-minute interval in which measurement was
+taken
+
+## Loading and preprocessing the data
+
+```{r, cache=TRUE,results = "hide"}
+library (plyr)
+library (dplyr)
+library (ggplot2)
+
+files = 'activity.csv'
+activity <- read.csv(files,header=TRUE,sep=",", colClasses = c('integer', 'Date', 'integer'))
+```
+
+## What is mean total number of steps taken per day?
+
+```{r, cache=TRUE}
+library (ggplot2)
+totalstepperday <- ddply(activity, .(date), summarize, step = sum(steps), mean = mean(steps))
+totalstepperday [is.na(totalstepperday )] <- 0
+summary(totalstepperday$step)
+```
+
+
+```{r}
+library (ggplot2)
+plot1 <- ggplot(totalstepperday, aes(x = date, y = step, colour="black", fill="red")) + geom_bar(stat = "identity")
+plot1
+```
+
+
+## What is the average daily activity pattern?
+```{r}
+library (plyr)
+library (ggplot2)
+daily_act <- activity
+daily_act [is.na(daily_act)] <- 0
+interv <- ddply(daily_act, .(interval), summarize, step = mean(steps))
+plot2 <- ggplot(data = interv, aes(interval, step)) + geom_line(colour="red")
+plot2
+```
+
+```{r}
+interv[interv$step == max(interv$step),]
+```
+
+## Inputing missing values
+
+```{r}
+missing <- sum(is.na(activity$steps))
+missing
+```
+
+```{r}
+activity_NA <- transform(activity, steps = ifelse(is.na(steps), round(mean(steps, na.rm=TRUE)), steps))
+summary(activity_NA)
+```
+
+```{r}
+totalstepperday_NA <- ddply(activity_NA, .(date), summarize, step = sum(steps))
+plot3 <- ggplot(totalstepperday_NA, aes(x = date, y = step, colour="black", fill="red")) + geom_bar(stat = "identity")
+plot3
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+library (lubridate)
+activity_NA_date <- transform(activity_NA, week = ifelse(wday(date, label= TRUE) == 'Sun' | wday(date, label= TRUE) == 'Sat' , "Weekends" , "Weekdays"))
+endorweek <- ddply(activity_NA_date, .(week, interval), summarize, steps = mean(steps))
+plot4 <- qplot(interval, steps, data = endorweek, color = week, facets = week ~ ., geom = c("line"))
+plot4
+```
